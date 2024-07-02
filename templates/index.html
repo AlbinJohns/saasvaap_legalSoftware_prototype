@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Case Search</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <style>
+        body {
+            background-color: #1e1e1e;
+            color: #eee;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            padding: 20px;
+            text-align: center;
+            animation: fadeIn 0.5s ease;
+        }
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+        h1 {
+            color: #4CAF50;
+            font-size: 36px;
+            margin-bottom: 20px;
+            animation: slideInDown 0.5s ease;
+        }
+        @keyframes slideInDown {
+            from {
+                transform: translateY(-50px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+        form {
+            margin-bottom: 20px;
+            position: relative;
+            animation: fadeInUp 0.5s ease;
+        }
+        @keyframes fadeInUp {
+            from {
+                transform: translateY(50px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+        input[type="text"], button {
+            padding: 12px 20px;
+            font-size: 16px;
+            border: none;
+            border-radius: 5px;
+            transition: all 0.3s ease;
+        }
+        input[type="text"] {
+            width: 300px;
+            margin-right: 10px;
+            background-color: #333;
+            color: #eee;
+        }
+        button {
+            background-color: #4CAF50;
+            color: #fff;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        #results {
+            margin-top: 20px;
+            text-align: left;
+            animation: zoomIn 0.5s ease;
+        }
+        @keyframes zoomIn {
+            from {
+                transform: scale(0);
+            }
+            to {
+                transform: scale(1);
+            }
+        }
+        .case-btn {
+            margin: 5px;
+            padding: 10px 20px;
+            background-color: #2c3e50;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease, transform 0.3s ease;
+        }
+        .case-btn:hover {
+            background-color: #34495e;
+            transform: scale(1.05);
+        }
+        #filter-section {
+            margin-top: 20px;
+            display: none;
+            animation: fadeIn 0.5s ease;
+        }
+        label {
+            color: #eee;
+            font-size: 18px;
+            margin-right: 10px;
+        }
+        select {
+            padding: 10px;
+            font-size: 16px;
+            border-radius: 5px;
+        }
+        #apply-filter {
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+        #apply-filter:hover {
+            background-color: #45a049;
+        }
+        p {
+            margin: 5px 0;
+        }
+        .spinner-container {
+            display: none;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+        .spinner {
+            width: 30px;
+            height: 30px;
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s infinite linear;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <h1>Search Cases</h1>
+    <form id="search-form">
+        <input type="text" name="query" placeholder="Enter search query">
+        <button type="submit">Search</button>
+        <div class="spinner-container" id="search-spinner">
+            <div class="spinner"></div>
+        </div>
+    </form>
+    
+    <div id="filter-section">
+        <h3>Filter Results</h3>
+        <label for="case-status-filter">Case Status:</label>
+        <select id="case-status-filter">
+            <option value="">All</option>
+            <option value="PENDING">PENDING</option>
+            <option value="DISPOSED">DISPOSED</option>
+        </select>
+        <button id="apply-filter">Apply Filter</button>
+    </div>
+
+    <div id="results"></div>
+
+    <script>
+        let searchResults = [];
+
+        $('#search-form').on('submit', function(e) {
+            e.preventDefault();
+            const query = $('input[name="query"]').val();
+            $('#search-spinner').fadeIn(); // Show spinner with fade animation
+            $('button[type="submit"]').prop('disabled', true); // Disable button
+            $.post('/search', { query: query }, function(data) {
+                $('#search-spinner').fadeOut(); // Hide spinner on success with fade animation
+                $('button[type="submit"]').prop('disabled', false); // Enable button
+                $('#results').empty();
+                searchResults = data;
+                if (data.ids && data.ids.length > 0) {
+                    for (let i = 0; i < data.ids[0].length; i++) {
+                        const caseId = data.ids[0][i];
+                        $('#results').append(`<button class="case-btn" data-case-id="${caseId}">Case ${caseId}</button><br>`);
+                    }
+                    $('#filter-section').show();
+                } else {
+                    $('#results').append('<p>No results found.</p>');
+                    $('#filter-section').hide();
+                }
+            }).fail(function() {
+                $('#search-spinner').fadeOut(); // Hide spinner on error with fade animation
+                $('button[type="submit"]').prop('disabled', false); // Enable button
+                $('#results').append('<p>Search failed. Please try again.</p>');
+                $('#filter-section').hide();
+            });
+        });
+
+        $('#apply-filter').on('click', function() {
+            const status = $('#case-status-filter').val();
+            filterResults(status);
+        });
+
+        function filterResults(status) {
+            $('#results').empty();
+            if (searchResults.ids && searchResults.ids.length > 0) {
+                for (let i = 0; i < searchResults.ids[0].length; i++) {
+                    const caseId = searchResults.ids[0][i];
+                    const caseMetadata = searchResults.metadatas[0][i];
+                    if (status === "" || caseMetadata.case_status === status) {
+                        $('#results').append(`<button class="case-btn" data-case-id="${caseId}">Case ${caseId}</button><br>`);
+                    }
+                }
+            } else {
+                $('#results').append('<p>No results found.</p>');
+            }
+        }
+
+        // Add event listener for case buttons
+        $(document).on('click', '.case-btn', function() {
+            const caseId = $(this).data('case-id');
+            window.location.href = `/chat/${caseId}`;
+        });
+    </script>
+</body>
+</html>
