@@ -6,7 +6,7 @@ import re
 
 # Configure generative AI model
 
-genai.configure(api_key='AIzaSyBJM6W72rBZLY4rcfHE0dEp_Ynbj1osheU')
+genai.configure(api_key='YOUR_API_KEY')
 model = genai.GenerativeModel('gemini-1.5-flash')
 
 # Function to extract text from a PDF file
